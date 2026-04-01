@@ -1,0 +1,69 @@
+const { UserBoard, Board, Column, Task, Substask } = require("../models");
+
+const { Board, User, UserBoard, Column, Task, Substask } = require("../models");
+
+exports.findById = async (id) => {
+  return Board.findOne({
+    where: { id },
+    include: [
+      {
+        model: User,
+        as: "creator",
+        attributes: ["id", "username", "email"],
+      },
+      {
+        model: UserBoard,
+        as: "memberships",
+        attributes: ["id", "role", "userId", "boardId"],
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "username", "email"],
+          },
+        ],
+      },
+      {
+        model: Column,
+        as: "columns",
+        attributes: ["id", "name", "boardId"],
+        include: [
+          {
+            model: Task,
+            as: "tasks",
+            attributes: [
+              "id",
+              "title",
+              "description",
+              "columnId",
+              "createdByUserId",
+              "createdAt",
+              "updatedAt",
+            ],
+            include: [
+              {
+                model: User,
+                as: "creator",
+                attributes: ["id", "username", "email"],
+              },
+              {
+                model: Substask,
+                as: "substasks",
+                attributes: ["id", "title", "isCompleted", "taskId"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      [{ model: Column, as: "columns" }, "position", "ASC"],
+      [
+        { model: Column, as: "columns" },
+        { model: Task, as: "tasks" },
+        "position",
+        "ASC",
+      ],
+    ],
+  });
+};
