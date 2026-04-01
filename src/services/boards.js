@@ -47,3 +47,22 @@ exports.createBoard = async ({ userId, title, columns }) => {
     throw err;
   }
 };
+
+exports.getOneBoard = async ({ boardId }) => {
+  const id = toInt(boardId);
+  if (!id) {
+    const err = new Error("Invalid post id");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const board = await boardRepository.findById(id);
+
+  if (!board) {
+    const err = new Error("Post not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return board;
+};

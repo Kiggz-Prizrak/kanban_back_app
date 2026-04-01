@@ -68,7 +68,7 @@ dist
 .env
 *.sqlite
 *.sqlite-journal
-
+.images/
 uploads/
 .idea/
 *.iml

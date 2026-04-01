@@ -10,7 +10,7 @@ module.exports = (req, res, next) => {
   const bearer = header.startsWith("Bearer ") ? header.slice(7) : null;
 
   //  Cookie HTTP-only
-  const cookieToken = req.cookies?.access_token || null;
+  const cookieToken = req.cookies?.kanban_access_token || null;
 
   // Priority: Bearer > Cookie
   const token = bearer || cookieToken;

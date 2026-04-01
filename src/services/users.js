@@ -23,11 +23,12 @@ exports.getAllUsers = async () => {
 
 exports.getOneUser = async (id) => {
   const userId = Number(id);
+
   if (!Number.isInteger(userId) || userId <= 0) {
     throw httpError(400, "bad request");
   }
 
-  const user = await userRepository.findOneWithFeedById(userId);
+  const user = await userRepository.findById(userId);
 
   if (!user) {
     throw httpError(404, "user not found");

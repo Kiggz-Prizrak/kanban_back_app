@@ -13,6 +13,8 @@ router.get("/me", auth, usersController.me);
 // router.get("/", auth, usersController.getAllUsers);
 // router.get("/:id", auth, usersController.getOneUser);
 
+router.get("/boards-member", auth, usersController.getAffiliatedBoards);
+
 router.patch("/:id", auth, multer, usersController.modifyUser);
 router.delete("/:id", auth, usersController.deleteUser);
 

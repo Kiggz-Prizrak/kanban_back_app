@@ -13,20 +13,20 @@ const PASSWORD_RX =
 const { httpError } = require("../utils/httpError");
 
 exports.signup = async ({ body, avatarFile, protocol, host }) => {
-  const { email, password, username, firstName, lastName } = body || {};
+  const { email, password, username } = body || {};
+
+  console.log(body);
 
   const isValidTypes =
     typeof email === "string" &&
     typeof password === "string" &&
-    typeof username === "string" &&
-    typeof firstName === "string" &&
-    typeof lastName === "string";
+    typeof username === "string";
 
   if (!isValidTypes) {
     throw httpError(400, "Please provide valid data");
   }
 
-  const nameFields = [username, lastName, firstName];
+  const nameFields = [username];
   if (!nameFields.every((v) => NAME_RX.test(v))) {
     throw httpError(400, "champs invalide");
   }
@@ -50,7 +50,6 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
 
   const hash = await bcrypt.hash(password, 10);
 
-  const { isAdmin, ...safeBody } = body;
 
   // Default avatar (propre, basé sur l’host courant)
   const baseUrl = `${protocol}://${host}`;
@@ -61,12 +60,9 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
     : defaultAvatar;
 
   await userRepository.create({
-    isAdmin: false,
-    email: safeBody.email,
+    email: body.email,
     password: hash,
-    username: safeBody.username,
-    firstName: safeBody.firstName,
-    lastName: safeBody.lastName,
+    username: body.username,
     avatar,
   });
 
@@ -92,11 +88,9 @@ exports.login = async ({ email, password }) => {
     throw httpError(500, "JWT secret is missing (JWT_SECRET)");
   }
 
-  const token = jwt.sign(
-    { UserId: user.id, isAdmin: user.isAdmin },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "24h" },
-  );
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || "24h",
+  });
 
   const safeUser = user.toJSON ? user.toJSON() : { ...user };
   delete safeUser.password;

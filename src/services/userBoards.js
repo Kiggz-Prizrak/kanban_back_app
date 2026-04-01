@@ -50,3 +50,14 @@ exports.assertAdminMembership = (userBoard) => {
     throw error;
   }
 };
+
+exports.getAllUserBoardsById = async (id) => {
+  console.log(id);
+  try {
+    return await userBoardsRepositories.findAllByUserId(id);
+  } catch (e) {
+    const err = new Error("Failed to fetch affiliated boards");
+    err.statusCode = 500;
+    throw err;
+  }
+};

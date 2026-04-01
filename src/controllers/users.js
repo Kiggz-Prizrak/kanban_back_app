@@ -2,11 +2,13 @@ const { promises: fs } = require("fs");
 const { cleanupUploadedAvatar } = require("../utils/uploadCleanup");
 const authService = require("../services/auth");
 const userService = require("../services/users");
+const userBoardService = require("../services/userBoards");
+
 const { COOKIE_OPTIONS } = require("../config/cookies");
 
 exports.me = async (req, res) => {
   try {
-    const userId = req.auth?.id || req.auth?.userId || req.auth?.UserId;
+    const userId = req.auth?.id;
 
     if (!userId) {
       return res.status(401).json({
@@ -16,18 +18,14 @@ exports.me = async (req, res) => {
 
     const user = await userService.getOneUser(userId);
 
-    if (!user) {
-      return res.status(404).json({
-        error: "User not found",
-      });
-    }
-
     return res.status(200).json({ user });
   } catch (error) {
     console.error("usersController.me error:", error);
 
-    return res.status(500).json({
-      error: "Internal server error",
+    const status = error?.status || error?.statusCode || 500;
+
+    return res.status(status).json({
+      error: error?.message || "Internal server error",
     });
   }
 };
@@ -57,7 +55,7 @@ exports.signup = async (req, res) => {
 
     const { user, token } = loginResult;
 
-    res.cookie("access_token", token, COOKIE_OPTIONS);
+    res.cookie("kanban_access_token", token, COOKIE_OPTIONS);
 
     return res.status(201).json({ user });
   } catch (err) {
@@ -77,7 +75,7 @@ exports.login = async (req, res) => {
       password: req.body.password,
     });
 
-    res.cookie("access_token", result.token, COOKIE_OPTIONS);
+    res.cookie("kanban_access_token", result.token, COOKIE_OPTIONS);
 
     return res.status(200).json({ user: result.user });
   } catch (err) {
@@ -165,11 +163,26 @@ exports.deleteUser = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  res.clearCookie("access_token", {
+  res.clearCookie("kanban_access_token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
   });
   return res.status(200).json({ message: "Déconnecté" });
+};
+exports.getAffiliatedBoards = async (req, res) => {
+  console.log(req.auth);
+  try {
+    const userBoards = await userBoardService.getAllUserBoardsById(req.auth.id);
+
+    console.log(userBoards)
+    return res.status(200).json(userBoards);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+
+    return res.status(status).json({
+      message: error?.message || "An error occurred",
+    });
+  }
 };

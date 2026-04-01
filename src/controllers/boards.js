@@ -24,7 +24,7 @@ exports.createBoard = async (req, res) => {
 
     return res.status(201).json({
       message: "board created",
-      board: created,
+      board: created.id,
     });
   } catch (error) {
     const status = error?.statusCode || error?.status || 500;
@@ -35,10 +35,41 @@ exports.createBoard = async (req, res) => {
   }
 };
 exports.getOneBoard = async (req, res) => {
+  try {
+    const board = await boardService.getOneBoard({
+      boardId: req.params.boardId,
+    });
+
+    return res.status(200).json(board);
+  } catch (error) {
+    const status = error?.statusCode || 500;
+
+    return res.status(status).json({
+      message: error?.message || "Error",
+    });
+  }
+};
+exports.remove = async (req, res) => {
   console.log(req);
 };
 
-exports.remove = async (req, res) => {
+exports.addColumn = async (req, res) => {
+  console.log(req);
+};
+
+exports.updateColumn = async (req, res) => {
+  console.log(req);
+};
+
+exports.deleteColumn = async (req, res) => {
+  console.log(req);
+};
+
+exports.addTask = async (req, res) => {
+  console.log(req);
+};
+
+exports.updateTask = async (req, res) => {
   console.log(req);
 };
 
@@ -66,4 +97,20 @@ exports.moveTask = async (req, res) => {
       message: err.message || "Error",
     });
   }
+};
+
+exports.deleteTask = async (req, res) => {
+  console.log(req);
+};
+
+exports.addMember = async (req, res) => {
+  console.log(req);
+};
+
+exports.updateMember = async (req, res) => {
+  console.log(req);
+};
+
+exports.deleteMember = async (req, res) => {
+  console.log(req);
 };
