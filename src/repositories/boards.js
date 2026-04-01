@@ -1,7 +1,8 @@
-const { UserBoard, Board, Column, Task, Substask } = require("../models");
-
 const { Board, User, UserBoard, Column, Task, Substask } = require("../models");
 
+exports.create = async (data, transaction) => {
+  return Board.create(data, { transaction });
+};
 exports.findById = async (id) => {
   return Board.findOne({
     where: { id },

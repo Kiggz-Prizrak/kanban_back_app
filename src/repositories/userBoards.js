@@ -4,6 +4,10 @@
 
 const { UserBoard } = require("../models");
 
+exports.create = async (data, transaction) => {
+  return UserBoard.create(data, { transaction });
+};
+
 exports.findByIdAndUserId = async ({ userBoardId, userId }) => {
   return UserBoard.findOne({
     where: {
