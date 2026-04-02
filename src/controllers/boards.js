@@ -1,30 +1,37 @@
 const taskService = require("../services/tasks");
 const boardService = require("../services/boards");
 const REGEX = require("../utils/regex");
+const { httpError } = require("../utils/httpError");
 
 exports.createBoard = async (req, res) => {
   try {
-    if (!REGEX.title.test(req.body.title)) {
+    const title =
+      typeof req.body.title === "string" ? req.body.title.trim() : "";
+    const columns = Array.isArray(req.body.columns) ? req.body.columns : [];
+
+    if (!REGEX.title.test(title)) {
       throw httpError(400, "invalid title");
     }
 
     if (
-      Array.isArray(req.body.columns) &&
-      req.body.columns.length > 0 &&
-      !req.body.columns.every((value) => REGEX.title.test(value))
+      columns.length > 0 &&
+      !columns.every(
+        (value) => typeof value === "string" && REGEX.title.test(value.trim()),
+      )
     ) {
       throw httpError(400, "invalid columns");
     }
 
     const created = await boardService.createBoard({
       userId: req.auth.id,
-      title: req.body.title,
-      columns: req.body.columns || [],
+      title,
+      columns,
     });
 
     return res.status(201).json({
       message: "board created",
-      board: created.id,
+      board: created,
+      boardId: created.id,
     });
   } catch (error) {
     const status = error?.statusCode || error?.status || 500;
@@ -34,6 +41,7 @@ exports.createBoard = async (req, res) => {
     });
   }
 };
+
 exports.getOneBoard = async (req, res) => {
   try {
     const board = await boardService.getOneBoard({
@@ -42,15 +50,41 @@ exports.getOneBoard = async (req, res) => {
 
     return res.status(200).json(board);
   } catch (error) {
-    const status = error?.statusCode || 500;
+    const status = error?.statusCode || error?.status || 500;
 
     return res.status(status).json({
       message: error?.message || "Error",
     });
   }
 };
+
 exports.remove = async (req, res) => {
-  console.log(req);
+  try {
+    if (!req.membership) {
+      const error = new Error("Membership not found");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (req.membership.role !== "admin") {
+      const error = new Error("Admin role required");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const result = await boardService.removeBoard({
+      boardId: req.params.boardId,
+      userId: req.auth.id,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error?.statusCode || error?.status || 500;
+
+    return res.status(status).json({
+      message: error?.message || "An error occurred",
+    });
+  }
 };
 
 exports.addColumn = async (req, res) => {
@@ -75,7 +109,7 @@ exports.updateTask = async (req, res) => {
 
 exports.moveTask = async (req, res) => {
   try {
-    if (!["admin", "member"].includes(req.membership.role)) {
+    if (!req.membership || !["admin", "member"].includes(req.membership.role)) {
       const error = new Error("Insufficient permissions");
       error.status = 403;
       throw error;

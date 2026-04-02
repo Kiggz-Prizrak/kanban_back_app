@@ -2,6 +2,7 @@ const { sequelize } = require("../models");
 const boardRepository = require("../repositories/boards");
 const columnRepository = require("../repositories/columns");
 const userBoardRepository = require("../repositories/userBoards");
+const { toInt } = require("../utils/parsing");
 
 exports.createBoard = async ({ userId, title, columns }) => {
   try {
@@ -50,8 +51,9 @@ exports.createBoard = async ({ userId, title, columns }) => {
 
 exports.getOneBoard = async ({ boardId }) => {
   const id = toInt(boardId);
+
   if (!id) {
-    const err = new Error("Invalid post id");
+    const err = new Error("Invalid board id");
     err.statusCode = 400;
     throw err;
   }
@@ -59,10 +61,41 @@ exports.getOneBoard = async ({ boardId }) => {
   const board = await boardRepository.findById(id);
 
   if (!board) {
-    const err = new Error("Post not found");
+    const err = new Error("Board not found");
     err.statusCode = 404;
     throw err;
   }
 
   return board;
+};
+
+exports.removeBoard = async ({ boardId, userId }) => {
+  const id = toInt(boardId);
+
+  if (!id) {
+    const err = new Error("Invalid board id");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const board = await boardRepository.findById(id);
+
+  if (!board) {
+    const err = new Error("Board not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (Number(board.createdByUserId) !== Number(userId)) {
+    const err = new Error("Only the creator can delete this board");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  await boardRepository.deleteById(id);
+
+  return {
+    message: "Board deleted successfully",
+    boardId: id,
+  };
 };

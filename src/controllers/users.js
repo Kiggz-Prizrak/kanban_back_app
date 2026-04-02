@@ -172,7 +172,7 @@ exports.logout = (req, res) => {
   return res.status(200).json({ message: "Déconnecté" });
 };
 exports.getAffiliatedBoards = async (req, res) => {
-  console.log(req.auth);
+
   try {
     const userBoards = await userBoardService.getAllUserBoardsById(req.auth.id);
 

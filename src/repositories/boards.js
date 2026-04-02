@@ -3,7 +3,8 @@ const { Board, User, UserBoard, Column, Task, Substask } = require("../models");
 exports.create = async (data, transaction) => {
   return Board.create(data, { transaction });
 };
-exports.findById = async (id) => {
+
+exports.findById = async (id, transaction = null) => {
   return Board.findOne({
     where: { id },
     include: [
@@ -66,5 +67,13 @@ exports.findById = async (id) => {
         "ASC",
       ],
     ],
+    transaction,
+  });
+};
+
+exports.deleteById = async (id, transaction = null) => {
+  return Board.destroy({
+    where: { id },
+    transaction,
   });
 };
