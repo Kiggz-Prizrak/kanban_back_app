@@ -1,4 +1,4 @@
-const { sequelize, Column, Task } = require("../models");
+const { sequelize, Column, Task, Substask, User } = require("../models");
 
 async function getColumnInBoard({ boardId, columnId, transaction }) {
   return Column.findOne({
@@ -9,6 +9,61 @@ async function getColumnInBoard({ boardId, columnId, transaction }) {
     transaction,
   });
 }
+
+exports.create = async (data, transaction = null) => {
+  return Task.create(data, { transaction });
+};
+
+exports.countByColumnId = async ({ columnId, transaction = null }) => {
+  return Task.count({
+    where: { columnId },
+    transaction,
+  });
+};
+
+exports.findByIdInBoard = async ({ boardId, taskId, transaction = null }) => {
+  return Task.findOne({
+    include: [
+      {
+        model: Column,
+        as: "column",
+        where: { boardId },
+        attributes: ["id", "boardId"],
+      },
+      {
+        model: User,
+        as: "creator",
+        attributes: ["id", "username", "email"],
+      },
+      {
+        model: Substask,
+        as: "substasks",
+        attributes: ["id", "title", "isCompleted", "taskId"],
+      },
+    ],
+    where: { id: taskId },
+    transaction,
+  });
+};
+
+exports.updateById = async (id, patch, transaction = null) => {
+  await Task.update(patch, {
+    where: { id },
+    transaction,
+  });
+
+  return Task.findOne({
+    where: { id },
+    transaction,
+  });
+};
+
+exports.deleteById = async (id, transaction = null) => {
+  return Task.destroy({
+    where: { id },
+    transaction,
+  });
+};
 
 async function getTaskInBoard({ boardId, taskId, transaction }) {
   return Task.findOne({
