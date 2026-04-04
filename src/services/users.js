@@ -2,15 +2,15 @@ const userRepository = require("../repositories/users");
 const bcrypt = require("bcrypt");
 
 const { toInt } = require("../utils/parsing");
-const {
-  safeUnlink,
-  extractFilenameFromMediaUrl,
-} = require("../utils/filesystem");
 const { httpError } = require("../utils/httpError");
 
 const EMAIL_RX = /^[\w\d.+-]+@[\w.-]+\.[a-z]{2,}$/;
 const PASSWORD_RX =
   /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[_.@$!%*#?&])[A-Za-z\d_.@$!%*#?&]{8,}$/;
+
+const SEARCH_MAX_LENGTH = 100;
+const SEARCH_MAX_LIMIT = 50;
+const SEARCH_DEFAULT_LIMIT = 10;
 
 exports.getAllUsers = async () => {
   try {
@@ -35,6 +35,39 @@ exports.getOneUser = async (id) => {
   }
 
   return user;
+};
+
+/**
+ * Recherche paginée d'utilisateurs par username ou email.
+ * Sécurités :
+ * - Longueur max du terme de recherche
+ * - Limite de résultats par page plafonnée
+ * - Page minimum = 1
+ * - Exclusion de l'utilisateur courant
+ * @param {{ q?: string, page?: number, limit?: number, requestingUserId: number }} params
+ */
+exports.searchUsers = async ({ q, page, limit, requestingUserId }) => {
+  // Sanitize le terme de recherche
+  const safeTerm =
+    typeof q === "string" ? q.trim().slice(0, SEARCH_MAX_LENGTH) : "";
+
+  // Sanitize page
+  const safePage = Math.max(1, toInt(page) || 1);
+
+  // Sanitize limit — plafond à 50 pour éviter les dumps massifs
+  const rawLimit = toInt(limit) || SEARCH_DEFAULT_LIMIT;
+  const safeLimit = Math.min(Math.max(1, rawLimit), SEARCH_MAX_LIMIT);
+
+  if (!requestingUserId) {
+    throw httpError(401, "Unauthorized");
+  }
+
+  return userRepository.searchByUsername({
+    q: safeTerm,
+    page: safePage,
+    limit: safeLimit,
+    excludeId: requestingUserId,
+  });
 };
 
 exports.modifyUser = async ({
@@ -78,10 +111,6 @@ exports.modifyUser = async ({
       throw httpError(400, "mot de passe invalide");
     }
     patch.password = await bcrypt.hash(body.password, 10);
-
-    if (body.email && typeof body.email !== "string") {
-      throw httpError(400, "please provides all fields");
-    }
   }
 
   if (avatarFile?.filename) {
@@ -95,12 +124,10 @@ exports.modifyUser = async ({
 
   const updatedUser = await userRepository.findById(userModifier.id);
 
-  const oldAvatarUrl = userModifier.avatar;
-
   return {
     message: "User modifié",
     user: updatedUser,
-    oldAvatarUrl,
+    oldAvatarUrl: userModifier.avatar,
     avatarWasUpdated: Boolean(avatarFile?.filename),
   };
 };

@@ -11,22 +11,16 @@ exports.me = async (req, res) => {
     const userId = req.auth?.id;
 
     if (!userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const user = await userService.getOneUser(userId);
-
     return res.status(200).json({ user });
   } catch (error) {
-    console.error("usersController.me error:", error);
-
     const status = error?.status || error?.statusCode || 500;
-
-    return res.status(status).json({
-      error: error?.message || "Internal server error",
-    });
+    return res
+      .status(status)
+      .json({ error: error?.message || "Internal server error" });
   }
 };
 
@@ -34,40 +28,28 @@ exports.signup = async (req, res) => {
   try {
     const avatarFile = req.files?.avatar?.[0] || null;
 
-    console.log("REQ BODY:", req.body);
-    console.log("REQ FILES:", req.files);
-
-    const signupResult = await authService.signup({
+    await authService.signup({
       body: req.body,
       avatarFile,
       protocol: req.protocol,
       host: req.get("host"),
     });
 
-    console.log("SIGNUP RESULT:", signupResult);
-
     const loginResult = await authService.login({
       email: req.body.email,
       password: req.body.password,
     });
 
-    console.log("LOGIN RESULT:", loginResult);
-
     const { user, token } = loginResult;
 
     res.cookie("kanban_access_token", token, COOKIE_OPTIONS);
-
     return res.status(201).json({ user });
   } catch (err) {
-    console.error("SIGNUP ERROR:", err);
-    console.error("STACK:", err.stack);
-
     const status = err.status || 500;
-    return res.status(status).json({
-      message: err.message || "Error",
-    });
+    return res.status(status).json({ message: err.message || "Error" });
   }
 };
+
 exports.login = async (req, res) => {
   try {
     const result = await authService.login({
@@ -76,7 +58,6 @@ exports.login = async (req, res) => {
     });
 
     res.cookie("kanban_access_token", result.token, COOKIE_OPTIONS);
-
     return res.status(200).json({ user: result.user });
   } catch (err) {
     await cleanupUploadedAvatar(req);
@@ -87,14 +68,14 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await userService.getAllUsers();
-    return res.status(200).json(users);
-  } catch (err) {
-    const status = err.status || 500;
-    return res.status(status).json({ message: err.message || "Error" });
-  }
+exports.logout = (req, res) => {
+  res.clearCookie("kanban_access_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+  });
+  return res.status(200).json({ message: "Déconnecté" });
 };
 
 exports.getOneUser = async (req, res) => {
@@ -103,6 +84,27 @@ exports.getOneUser = async (req, res) => {
     return res.status(200).json(user);
   } catch (err) {
     const status = err.status || 500;
+    return res.status(status).json({ message: err.message || "Error" });
+  }
+};
+
+/**
+ * GET /api/users/search?q=username&page=1&limit=10
+ * Recherche paginée — authentifié uniquement
+ * Retourne : { users, total, page, totalPages }
+ */
+exports.searchUsers = async (req, res) => {
+  try {
+    const result = await userService.searchUsers({
+      q: req.query.q,
+      page: req.query.page,
+      limit: req.query.limit,
+      requestingUserId: req.auth.id,
+    });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
 };
@@ -132,7 +134,6 @@ exports.modifyUser = async (req, res) => {
     return res.status(200).json({ message: result.message, user: result.user });
   } catch (err) {
     await cleanupUploadedAvatar(req);
-
     const status = err.status || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
@@ -147,7 +148,6 @@ exports.deleteUser = async (req, res) => {
 
     if (result.avatarUrl) {
       const filename = result.avatarUrl.split("/images/")[1];
-
       if (filename && filename !== "default_avatar.png") {
         try {
           await fs.unlink(`images/${filename}`);
@@ -162,27 +162,14 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-exports.logout = (req, res) => {
-  res.clearCookie("kanban_access_token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-  });
-  return res.status(200).json({ message: "Déconnecté" });
-};
 exports.getAffiliatedBoards = async (req, res) => {
-
   try {
     const userBoards = await userBoardService.getAllUserBoardsById(req.auth.id);
-
-    console.log(userBoards)
     return res.status(200).json(userBoards);
   } catch (error) {
     const status = error?.statusCode || 500;
-
-    return res.status(status).json({
-      message: error?.message || "An error occurred",
-    });
+    return res
+      .status(status)
+      .json({ message: error?.message || "An error occurred" });
   }
 };

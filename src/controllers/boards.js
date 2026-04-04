@@ -1,5 +1,6 @@
 const taskService = require("../services/tasks");
 const boardService = require("../services/boards");
+const userBoardService = require("../services/userBoards");
 const REGEX = require("../utils/regex");
 const { httpError } = require("../utils/httpError");
 
@@ -289,14 +290,83 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
+// ===========================
+// MEMBERS
+// ===========================
+
+/**
+ * POST /api/boards/:boardId/new-member
+ * Body: { email: string, role?: "admin" | "member" | "viewer" }
+ * Recherche l'utilisateur par email et l'ajoute au board
+ */
 exports.addMember = async (req, res) => {
-  console.log(req);
+  try {
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim() : "";
+    const role = req.body.role || "member";
+
+    if (!email) throw httpError(400, "Email is required");
+
+    const result = await userBoardService.addMember({
+      boardId: req.params.boardId,
+      email,
+      role,
+      requestingUserId: req.auth.id,
+    });
+
+    return res.status(201).json(result);
+  } catch (error) {
+    const status = error?.statusCode || error?.status || 500;
+    return res
+      .status(status)
+      .json({ message: error?.message || "An error occurred" });
+  }
 };
 
+/**
+ * PUT /api/boards/:boardId/member/:memberId
+ * Body: { role: "admin" | "member" | "viewer" }
+ * memberId = id du UserBoard (pas du User)
+ */
 exports.updateMember = async (req, res) => {
-  console.log(req);
+  try {
+    const role = req.body.role;
+
+    if (!role) throw httpError(400, "Role is required");
+
+    const result = await userBoardService.updateMember({
+      boardId: req.params.boardId,
+      memberId: req.params.memberId,
+      role,
+      requestingUserId: req.auth.id,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error?.statusCode || error?.status || 500;
+    return res
+      .status(status)
+      .json({ message: error?.message || "An error occurred" });
+  }
 };
 
+/**
+ * DELETE /api/boards/:boardId/member/:memberId
+ * memberId = id du UserBoard
+ */
 exports.deleteMember = async (req, res) => {
-  console.log(req);
+  try {
+    const result = await userBoardService.deleteMember({
+      boardId: req.params.boardId,
+      memberId: req.params.memberId,
+      requestingUserId: req.auth.id,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error?.statusCode || error?.status || 500;
+    return res
+      .status(status)
+      .json({ message: error?.message || "An error occurred" });
+  }
 };

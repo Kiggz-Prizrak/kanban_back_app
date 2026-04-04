@@ -2,7 +2,7 @@
  * @file Repository for board memberships
  */
 
-const { UserBoard, Board } = require("../models");
+const { UserBoard, Board, User } = require("../models");
 
 exports.create = async (data, transaction) => {
   return UserBoard.create(data, { transaction });
@@ -11,6 +11,7 @@ exports.create = async (data, transaction) => {
 exports.findById = async (id) => {
   return UserBoard.findOne({ where: { id } });
 };
+
 exports.findAllByUserId = async (id) => {
   return UserBoard.findAll({
     where: { userId: id },
@@ -19,6 +20,11 @@ exports.findAllByUserId = async (id) => {
         model: Board,
         as: "board",
         attributes: ["id", "name"],
+      },
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "username", "email", "avatar"],
       },
     ],
   });
@@ -50,4 +56,41 @@ exports.findByUserIdAndBoardId = async ({ userId, boardId }) => {
       boardId,
     },
   });
+};
+
+exports.findByIdAndBoardId = async ({ id, boardId }) => {
+  return UserBoard.findOne({
+    where: { id, boardId },
+    include: [
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "username", "email", "avatar"],
+      },
+    ],
+  });
+};
+
+/**
+ * Met à jour un membership par son id
+ * @param {number} id
+ * @param {{ role?: string }} patch
+ */
+exports.updateById = async (id, patch) => {
+  await UserBoard.update(patch, { where: { id } });
+
+  return UserBoard.findOne({
+    where: { id },
+    include: [
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "username", "email", "avatar"],
+      },
+    ],
+  });
+};
+
+exports.deleteById = async (id) => {
+  return UserBoard.destroy({ where: { id } });
 };
