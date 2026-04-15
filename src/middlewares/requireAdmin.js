@@ -1,4 +1,4 @@
-function requireAdmin(req, res, next) {
+const requireAdmin = (req, res, next) => {
   if (!req.membership) {
     return res.status(500).json({
       error: "Membership not loaded",
@@ -12,6 +12,6 @@ function requireAdmin(req, res, next) {
   }
 
   return next();
-}
+};
 
 module.exports = requireAdmin;

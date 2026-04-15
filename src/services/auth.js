@@ -15,8 +15,6 @@ const { httpError } = require("../utils/httpError");
 exports.signup = async ({ body, avatarFile, protocol, host }) => {
   const { email, password, username } = body || {};
 
-  console.log(body);
-
   const isValidTypes =
     typeof email === "string" &&
     typeof password === "string" &&
@@ -49,7 +47,6 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
   }
 
   const hash = await bcrypt.hash(password, 10);
-
 
   // Default avatar (propre, basé sur l’host courant)
   const baseUrl = `${protocol}://${host}`;

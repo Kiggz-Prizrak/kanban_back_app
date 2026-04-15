@@ -5,13 +5,20 @@ const auth = require("../middlewares/auth");
 const loadMembership = require("../middlewares/loadMembership");
 const boardController = require("../controllers/boards");
 const requireAdmin = require("../middlewares/requireAdmin");
+const requireMember = require("../middlewares/requireMember");
 
 // board
 router.post("/", auth, boardController.createBoard);
 router.get("/:boardId", auth, loadMembership, boardController.getOneBoard);
-router.delete("/:boardId", auth, loadMembership, boardController.remove);
+router.delete(
+  "/:boardId",
+  auth,
+  loadMembership,
+  requireAdmin,
+  boardController.remove,
+);
 
-// columns
+// columns — admin only
 router.post(
   "/:boardId/new-column",
   auth,
@@ -34,33 +41,37 @@ router.delete(
   boardController.deleteColumn,
 );
 
-// task
+// tasks — admin + member only (viewer locked)
 router.post(
   "/:boardId/column/:columnId/new-task",
   auth,
   loadMembership,
+  requireMember,
   boardController.addTask,
 );
 router.put(
   "/:boardId/column/:columnId/task/:taskId",
   auth,
   loadMembership,
+  requireMember,
   boardController.updateTask,
 );
 router.patch(
   "/:boardId/tasks/:taskId/move",
   auth,
   loadMembership,
+  requireMember,
   boardController.moveTask,
 );
 router.delete(
   "/:boardId/column/:columnId/task/:taskId",
   auth,
   loadMembership,
+  requireMember,
   boardController.deleteTask,
 );
 
-//member
+// members — admin only
 router.post(
   "/:boardId/new-member",
   auth,

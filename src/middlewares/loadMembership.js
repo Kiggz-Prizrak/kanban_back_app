@@ -4,7 +4,7 @@
 
 const userBoardRepository = require("../repositories/userBoards");
 
-async function loadMembership(req, res, next) {
+const loadMembership = async (req, res, next) => {
   try {
     const userId = req.auth?.id;
     const boardId = req.params.boardId;
@@ -38,6 +38,6 @@ async function loadMembership(req, res, next) {
   } catch (error) {
     return next(error);
   }
-}
+};
 
 module.exports = loadMembership;
