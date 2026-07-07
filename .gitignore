@@ -1,3 +1,4 @@
+.refact/
 # --- Node.js standard ignores ---
 logs
 *.log
