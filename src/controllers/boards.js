@@ -1,9 +1,22 @@
+/**
+ * @file HTTP handlers for /api/boards — boards, columns, tasks, members.
+ * @module controllers/boards
+ */
+
 const taskService = require("../services/tasks");
 const boardService = require("../services/boards");
 const userBoardService = require("../services/userBoards");
 const REGEX = require("../utils/regex");
 const { httpError } = require("../utils/httpError");
 
+/**
+ * POST /api/boards
+ * Body: { title: string, columns?: string[] }
+ * Crée un board et rend son créateur admin de celui-ci.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.createBoard = async (req, res) => {
   try {
     const title =
@@ -43,6 +56,14 @@ exports.createBoard = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/boards/:boardId
+ * Retourne le board complet (colonnes, tâches, sous-tâches, membres).
+ * Nécessite `loadMembership` — l'appelant doit être membre du board.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.getOneBoard = async (req, res) => {
   try {
     const board = await boardService.getOneBoard({
@@ -59,6 +80,14 @@ exports.getOneBoard = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /api/boards/:boardId
+ * Supprime le board. Réservé à l'admin membership ET au créateur du board
+ * (double vérification, voir `services/boards.removeBoard`).
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.remove = async (req, res) => {
   try {
     if (!req.membership) {
@@ -88,6 +117,14 @@ exports.remove = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/boards/:boardId/new-column
+ * Body: { name: string }
+ * Ajoute une colonne en fin de board. Admin uniquement.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.addColumn = async (req, res) => {
   try {
     const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
@@ -111,6 +148,14 @@ exports.addColumn = async (req, res) => {
   }
 };
 
+/**
+ * PUT /api/boards/:boardId/column/:columnId
+ * Body: { name?: string, position?: number }
+ * Renomme et/ou repositionne une colonne. Admin uniquement.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.updateColumn = async (req, res) => {
   try {
     const payload = {};
@@ -144,6 +189,13 @@ exports.updateColumn = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /api/boards/:boardId/column/:columnId
+ * Supprime une colonne et ses tâches (cascade DB). Admin uniquement.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.deleteColumn = async (req, res) => {
   try {
     const result = await boardService.deleteColumn({
@@ -161,6 +213,14 @@ exports.deleteColumn = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/boards/:boardId/column/:columnId/new-task
+ * Body: { title: string, description: string, subtasks?: (string|{title:string})[] }
+ * Crée une tâche en fin de colonne. Admin ou member.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.addTask = async (req, res) => {
   try {
     const title =
@@ -198,6 +258,15 @@ exports.addTask = async (req, res) => {
   }
 };
 
+/**
+ * PUT /api/boards/:boardId/column/:columnId/task/:taskId
+ * Body: { title?: string, description?: string, subtasks?: object[] }
+ * Met à jour une tâche et, si fourni, resynchronise ses sous-tâches
+ * (ajout/mise à jour/suppression par diff). Admin ou member.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.updateTask = async (req, res) => {
   try {
     const payload = {};
@@ -246,6 +315,15 @@ exports.updateTask = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /api/boards/:boardId/tasks/:taskId/move
+ * Body: { sourceColumnId: number, destinationColumnId: number, destinationIndex: number }
+ * Déplace une tâche entre colonnes (ou la réordonne au sein de la même
+ * colonne) et réécrit les positions. Admin ou member — viewer refusé.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.moveTask = async (req, res) => {
   try {
     if (!req.membership || !["admin", "member"].includes(req.membership.role)) {
@@ -272,6 +350,13 @@ exports.moveTask = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /api/boards/:boardId/column/:columnId/task/:taskId
+ * Supprime une tâche. Admin ou member.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.deleteTask = async (req, res) => {
   try {
     const result = await boardService.deleteTask({
@@ -297,7 +382,10 @@ exports.deleteTask = async (req, res) => {
 /**
  * POST /api/boards/:boardId/new-member
  * Body: { email: string, role?: "admin" | "member" | "viewer" }
- * Recherche l'utilisateur par email et l'ajoute au board
+ * Recherche l'utilisateur par email et l'ajoute au board. Admin uniquement.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
  */
 exports.addMember = async (req, res) => {
   try {
@@ -326,7 +414,11 @@ exports.addMember = async (req, res) => {
 /**
  * PUT /api/boards/:boardId/member/:memberId
  * Body: { role: "admin" | "member" | "viewer" }
- * memberId = id du UserBoard (pas du User)
+ * memberId = id du UserBoard (pas du User). Admin uniquement — un admin ne
+ * peut pas changer son propre rôle (voir `services/userBoards.updateMember`).
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
  */
 exports.updateMember = async (req, res) => {
   try {
@@ -352,7 +444,11 @@ exports.updateMember = async (req, res) => {
 
 /**
  * DELETE /api/boards/:boardId/member/:memberId
- * memberId = id du UserBoard
+ * memberId = id du UserBoard. Admin uniquement — un admin ne peut pas se
+ * retirer lui-même (voir `services/userBoards.deleteMember`).
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
  */
 exports.deleteMember = async (req, res) => {
   try {

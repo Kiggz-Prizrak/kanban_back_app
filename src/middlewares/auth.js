@@ -1,5 +1,21 @@
+/**
+ * @file Authentication middleware — verifies the JWT and populates req.auth.
+ * @module middlewares/auth
+ */
+
 const jwt = require("jsonwebtoken");
 
+/**
+ * Vérifie le JWT porté soit par le header `Authorization: Bearer <token>`
+ * (clients non-navigateur : Postman, Insomnia, mobile), soit par le cookie
+ * httpOnly `kanban_access_token` (navigateur). Le Bearer est prioritaire
+ * s'il est présent. Pose `req.auth = { id }` (payload du token) en cas de
+ * succès.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ * @returns {void}
+ */
 module.exports = (req, res, next) => {
   // Bearer token (Insomnia / Postman / mobile)
   const header =

@@ -1,3 +1,8 @@
+/**
+ * @file Business logic for user profile management and search.
+ * @module services/users
+ */
+
 const userRepository = require("../repositories/users");
 const bcrypt = require("bcrypt");
 
@@ -12,6 +17,11 @@ const SEARCH_MAX_LENGTH = 100;
 const SEARCH_MAX_LIMIT = 50;
 const SEARCH_DEFAULT_LIMIT = 10;
 
+/**
+ * @deprecated Route désactivée côté `routes/users.js` (utiliser `searchUsers`).
+ * @returns {Promise<import('../models').User[]>}
+ * @throws {Error} 400 en cas d'échec de la requête.
+ */
 exports.getAllUsers = async () => {
   try {
     const users = await userRepository.findAllWithFeed();
@@ -21,6 +31,12 @@ exports.getAllUsers = async () => {
   }
 };
 
+/**
+ * @param {number|string} id
+ * @returns {Promise<import('../models').User>}
+ * @throws {Error} 400 si l'id n'est pas un entier positif.
+ * @throws {Error} 404 si l'utilisateur n'existe pas.
+ */
 exports.getOneUser = async (id) => {
   const userId = Number(id);
 
@@ -45,6 +61,8 @@ exports.getOneUser = async (id) => {
  * - Page minimum = 1
  * - Exclusion de l'utilisateur courant
  * @param {{ q?: string, page?: number, limit?: number, requestingUserId: number }} params
+ * @returns {Promise<{ users: object[], total: number, page: number, totalPages: number }>}
+ * @throws {Error} 401 si `requestingUserId` est manquant.
  */
 exports.searchUsers = async ({ q, page, limit, requestingUserId }) => {
   // Sanitize le terme de recherche
@@ -70,6 +88,16 @@ exports.searchUsers = async ({ q, page, limit, requestingUserId }) => {
   });
 };
 
+/**
+ * Modifie le profil ciblé. Réservé à l'utilisateur lui-même (`auth.id`
+ * doit correspondre à `targetUserId`) — il n'existe pas de rôle admin
+ * global dans ce système, seulement des rôles par board.
+ * @param {{ targetUserId: number|string, auth: { id: number }, body: object, avatarFile: Express.Multer.File|null, protocol: string, host: string }} params
+ * @returns {Promise<{ message: string, user: object, oldAvatarUrl: string, avatarWasUpdated: boolean }>}
+ * @throws {Error} 400 si l'id est invalide, l'email/mot de passe invalide, ou email/username déjà pris.
+ * @throws {Error} 403 si l'appelant n'est pas le propriétaire du profil.
+ * @throws {Error} 404 si l'utilisateur ciblé n'existe pas.
+ */
 exports.modifyUser = async ({
   targetUserId,
   auth,
@@ -132,6 +160,15 @@ exports.modifyUser = async ({
   };
 };
 
+/**
+ * Supprime le compte ciblé. Réservé à l'utilisateur lui-même (`auth.id`
+ * doit correspondre à `targetUserId`).
+ * @param {{ targetUserId: number|string, auth: { id: number } }} params
+ * @returns {Promise<{ message: string, avatarUrl: string }>}
+ * @throws {Error} 400 si l'id est invalide.
+ * @throws {Error} 403 si l'appelant n'est pas le propriétaire du compte.
+ * @throws {Error} 404 si l'utilisateur ciblé n'existe pas.
+ */
 exports.deleteUser = async ({ targetUserId, auth }) => {
   const id = Number(targetUserId);
   if (!Number.isInteger(id) || id <= 0) {

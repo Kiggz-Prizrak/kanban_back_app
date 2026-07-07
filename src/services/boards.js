@@ -1,3 +1,8 @@
+/**
+ * @file Business logic for boards, columns, tasks and subtasks.
+ * @module services/boards
+ */
+
 const { sequelize } = require("../models");
 const boardRepository = require("../repositories/boards");
 const columnRepository = require("../repositories/columns");
@@ -6,6 +11,13 @@ const substaskRepository = require("../repositories/subtasks");
 const userBoardRepository = require("../repositories/userBoards");
 const { toInt } = require("../utils/parsing");
 
+/**
+ * Crée un board (+ colonnes initiales) et rend son créateur admin, dans
+ * une transaction.
+ * @param {{ userId: number, title: string, columns?: string[] }} params
+ * @returns {Promise<import('../models').Board>} Le board créé, rechargé avec ses relations.
+ * @throws {Error} 500 en cas d'échec de création.
+ */
 exports.createBoard = async ({ userId, title, columns }) => {
   try {
     const safeColumns = Array.isArray(columns) ? columns : [];
@@ -51,6 +63,12 @@ exports.createBoard = async ({ userId, title, columns }) => {
   }
 };
 
+/**
+ * @param {{ boardId: number|string }} params
+ * @returns {Promise<import('../models').Board>}
+ * @throws {Error} 400 si l'id est invalide.
+ * @throws {Error} 404 si le board n'existe pas.
+ */
 exports.getOneBoard = async ({ boardId }) => {
   const id = toInt(boardId);
 
@@ -71,6 +89,15 @@ exports.getOneBoard = async ({ boardId }) => {
   return board;
 };
 
+/**
+ * Supprime un board. Réservé au créateur du board (en plus du contrôle
+ * "admin membership" déjà fait côté controller/route).
+ * @param {{ boardId: number|string, userId: number }} params
+ * @returns {Promise<{ message: string, boardId: number }>}
+ * @throws {Error} 400 si l'id est invalide.
+ * @throws {Error} 403 si l'appelant n'est pas le créateur du board.
+ * @throws {Error} 404 si le board n'existe pas.
+ */
 exports.removeBoard = async ({ boardId, userId }) => {
   const id = toInt(boardId);
 
@@ -102,6 +129,13 @@ exports.removeBoard = async ({ boardId, userId }) => {
   };
 };
 
+/**
+ * Ajoute une colonne en fin de board.
+ * @param {{ boardId: number|string, name: string }} params
+ * @returns {Promise<{ message: string, column: import('../models').Column }>}
+ * @throws {Error} 400 si l'id est invalide.
+ * @throws {Error} 404 si le board n'existe pas.
+ */
 exports.addColumn = async ({ boardId, name }) => {
   const parsedBoardId = toInt(boardId);
 
@@ -133,6 +167,13 @@ exports.addColumn = async ({ boardId, name }) => {
   };
 };
 
+/**
+ * Renomme et/ou repositionne une colonne, scopée au board donné.
+ * @param {{ boardId: number|string, columnId: number|string, name?: string, position?: number }} params
+ * @returns {Promise<{ message: string, column: import('../models').Column }>}
+ * @throws {Error} 400 si `boardId`/`columnId` sont invalides.
+ * @throws {Error} 404 si la colonne n'existe pas dans ce board.
+ */
 exports.updateColumn = async ({ boardId, columnId, name, position }) => {
   const parsedBoardId = toInt(boardId);
   const parsedColumnId = toInt(columnId);
@@ -177,6 +218,14 @@ exports.updateColumn = async ({ boardId, columnId, name, position }) => {
   };
 };
 
+/**
+ * Supprime une colonne, scopée au board donné. Les tâches associées sont
+ * supprimées en cascade côté DB.
+ * @param {{ boardId: number|string, columnId: number|string }} params
+ * @returns {Promise<{ message: string, columnId: number }>}
+ * @throws {Error} 400 si `boardId`/`columnId` sont invalides.
+ * @throws {Error} 404 si la colonne n'existe pas dans ce board.
+ */
 exports.deleteColumn = async ({ boardId, columnId }) => {
   const parsedBoardId = toInt(boardId);
   const parsedColumnId = toInt(columnId);
@@ -206,6 +255,14 @@ exports.deleteColumn = async ({ boardId, columnId }) => {
   };
 };
 
+/**
+ * Crée une tâche en fin de colonne (+ sous-tâches initiales), dans une
+ * transaction.
+ * @param {{ boardId: number|string, columnId: number|string, userId: number, title: string, description: string, subtasks?: (string|{title:string})[] }} params
+ * @returns {Promise<{ message: string, task: import('../models').Task }>}
+ * @throws {Error} 400 si `boardId`/`columnId` sont invalides.
+ * @throws {Error} 404 si la colonne n'existe pas dans ce board.
+ */
 exports.addTask = async ({
   boardId,
   columnId,
@@ -286,6 +343,16 @@ exports.addTask = async ({
   });
 };
 
+/**
+ * Met à jour une tâche (titre/description) et, si `subtasks` est fourni,
+ * resynchronise ses sous-tâches par diff (update les existantes listées,
+ * crée les nouvelles, supprime celles absentes de la liste), dans une
+ * transaction.
+ * @param {{ boardId: number|string, columnId: number|string, taskId: number|string, title?: string, description?: string, subtasks?: {id?: number, title?: string, isCompleted?: boolean}[] }} params
+ * @returns {Promise<{ message: string, task: import('../models').Task }>}
+ * @throws {Error} 400 si `boardId`/`columnId`/`taskId` sont invalides.
+ * @throws {Error} 404 si la tâche n'existe pas dans cette colonne/board.
+ */
 exports.updateTask = async ({
   boardId,
   columnId,
@@ -390,6 +457,13 @@ exports.updateTask = async ({
   });
 };
 
+/**
+ * Supprime une tâche, scopée à la colonne/board donnés.
+ * @param {{ boardId: number|string, columnId: number|string, taskId: number|string }} params
+ * @returns {Promise<{ message: string, taskId: number }>}
+ * @throws {Error} 400 si `boardId`/`columnId`/`taskId` sont invalides.
+ * @throws {Error} 404 si la tâche n'existe pas dans cette colonne/board.
+ */
 exports.deleteTask = async ({ boardId, columnId, taskId }) => {
   const parsedBoardId = toInt(boardId);
   const parsedColumnId = toInt(columnId);

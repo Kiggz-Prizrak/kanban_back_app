@@ -1,9 +1,27 @@
+/**
+ * @file Data access layer for the Board model.
+ * @module repositories/boards
+ */
+
 const { Board, User, UserBoard, Column, Task, Substask } = require("../models");
 
+/**
+ * @param {object} data
+ * @param {import('sequelize').Transaction} [transaction]
+ * @returns {Promise<Board>}
+ */
 exports.create = async (data, transaction) => {
   return Board.create(data, { transaction });
 };
 
+/**
+ * Charge un board avec son créateur, ses memberships (+ user associé), et
+ * ses colonnes (+ tâches, + créateur de tâche, + sous-tâches), triés par
+ * position.
+ * @param {number} id
+ * @param {import('sequelize').Transaction} [transaction]
+ * @returns {Promise<Board|null>}
+ */
 exports.findById = async (id, transaction = null) => {
   return Board.findOne({
     where: { id },
@@ -71,6 +89,11 @@ exports.findById = async (id, transaction = null) => {
   });
 };
 
+/**
+ * @param {number} id
+ * @param {import('sequelize').Transaction} [transaction]
+ * @returns {Promise<number>} Nombre de lignes supprimées (0 ou 1).
+ */
 exports.deleteById = async (id, transaction = null) => {
   return Board.destroy({
     where: { id },

@@ -1,3 +1,8 @@
+/**
+ * @file Business logic for signup/login.
+ * @module services/auth
+ */
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userRepository = require("../repositories/users");
@@ -18,6 +23,13 @@ const { httpError } = require("../utils/httpError");
 const DUMMY_HASH =
   "$2b$10$TrdrHm61.W1b6xIPSXAPRu19VdfNdBtOEoFo8TOwJNEjY7HivgbMG";
 
+/**
+ * Crée un compte utilisateur. Ne connecte pas l'utilisateur — voir
+ * `controllers/users.signup` qui enchaîne avec `login`.
+ * @param {{ body: { email: string, password: string, username: string }, avatarFile: Express.Multer.File|null, protocol: string, host: string }} params
+ * @returns {Promise<{ message: string }>}
+ * @throws {Error} 400 si un champ est invalide ou si l'email/username est déjà pris.
+ */
 exports.signup = async ({ body, avatarFile, protocol, host }) => {
   const { email, password, username } = body || {};
 
@@ -72,6 +84,18 @@ exports.signup = async ({ body, avatarFile, protocol, host }) => {
   return { message: "Utilisateur créé" };
 };
 
+/**
+ * Vérifie les identifiants et émet un JWT (HS256, `{ id }`, expiration
+ * `JWT_EXPIRES_IN`). Renvoie toujours le même statut/message qu'il
+ * s'agisse d'un email inconnu ou d'un mot de passe invalide, et compare
+ * systématiquement contre un hash (réel ou bidon), pour ne pas fuiter
+ * l'existence d'un compte via le statut ou le timing de la réponse.
+ * @param {{ email: string, password: string }} params
+ * @returns {Promise<{ user: object, token: string }>} `user` sans le mot de passe.
+ * @throws {Error} 400 si email/password ne sont pas des chaînes.
+ * @throws {Error} 401 si l'email est inconnu ou le mot de passe invalide.
+ * @throws {Error} 500 si `JWT_SECRET` n'est pas configuré.
+ */
 exports.login = async ({ email, password }) => {
   if (typeof email !== "string" || typeof password !== "string") {
     throw httpError(400, "please provides valid data");

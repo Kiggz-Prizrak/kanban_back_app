@@ -1,5 +1,5 @@
 /**
- * @file userBoards service
+ * @file userBoards service — board memberships (rôles admin/member/viewer).
  */
 
 const userBoardsRepositories = require("../repositories/userBoards");
@@ -7,6 +7,15 @@ const userRepository = require("../repositories/users");
 const { toInt } = require("../utils/parsing");
 const { httpError } = require("../utils/httpError");
 
+/**
+ * Charge le membership d'un utilisateur pour un `UserBoard` donné,
+ * optionnellement scopé à un board (protection IDOR).
+ * @param {{ userBoardId: number, userId: number, boardId?: number }} params
+ * @returns {Promise<import('../models').UserBoard>}
+ * @throws {Error} 400 si `userBoardId` est manquant.
+ * @throws {Error} 401 si `userId` est manquant.
+ * @throws {Error} 403 si l'utilisateur n'est pas membre de ce board.
+ */
 exports.getMembershipForUser = async ({ userBoardId, userId, boardId }) => {
   if (!userBoardId) {
     throw httpError(400, "Missing userBoardId");
@@ -34,6 +43,12 @@ exports.getMembershipForUser = async ({ userBoardId, userId, boardId }) => {
   return userBoard;
 };
 
+/**
+ * @param {import('../models').UserBoard} userBoard
+ * @returns {void}
+ * @throws {Error} 500 si `userBoard` n'a pas été chargé au préalable.
+ * @throws {Error} 403 si le rôle n'est pas "admin".
+ */
 exports.assertAdminMembership = (userBoard) => {
   if (!userBoard) {
     throw httpError(500, "Membership not loaded before role check");
@@ -44,6 +59,11 @@ exports.assertAdminMembership = (userBoard) => {
   }
 };
 
+/**
+ * @param {number} id Id de l'utilisateur.
+ * @returns {Promise<import('../models').UserBoard[]>} Boards dont l'utilisateur est membre.
+ * @throws {Error} 500 en cas d'échec de la requête.
+ */
 exports.getAllUserBoardsById = async (id) => {
   try {
     return await userBoardsRepositories.findAllByUserId(id);
@@ -56,6 +76,10 @@ exports.getAllUserBoardsById = async (id) => {
  * Ajoute un membre au board.
  * L'admin fournit l'email de l'utilisateur à ajouter + son rôle.
  * @param {{ boardId: number, email: string, role?: string, requestingUserId: number }} params
+ * @returns {Promise<{ message: string, membership: object }>}
+ * @throws {Error} 400 si `boardId`/`role` invalide, ou si l'appelant s'ajoute lui-même.
+ * @throws {Error} 404 si aucun utilisateur ne correspond à cet email.
+ * @throws {Error} 409 si l'utilisateur est déjà membre du board.
  */
 exports.addMember = async ({
   boardId,
@@ -123,6 +147,9 @@ exports.addMember = async ({
  * memberId = id du UserBoard, pas du User.
  * L'admin ne peut pas changer son propre rôle.
  * @param {{ boardId: number, memberId: number, role: string, requestingUserId: number }} params
+ * @returns {Promise<{ message: string, membership: import('../models').UserBoard }>}
+ * @throws {Error} 400 si `boardId`/`memberId`/`role` invalide, ou si l'appelant vise son propre membership.
+ * @throws {Error} 404 si le membership n'existe pas dans ce board.
  */
 exports.updateMember = async ({
   boardId,
@@ -174,6 +201,9 @@ exports.updateMember = async ({
  * memberId = id du UserBoard.
  * L'admin ne peut pas se retirer lui-même.
  * @param {{ boardId: number, memberId: number, requestingUserId: number }} params
+ * @returns {Promise<{ message: string, memberId: number }>}
+ * @throws {Error} 400 si `boardId`/`memberId` invalide, ou si l'appelant se cible lui-même.
+ * @throws {Error} 404 si le membership n'existe pas dans ce board.
  */
 exports.deleteMember = async ({ boardId, memberId, requestingUserId }) => {
   const parsedBoardId = toInt(boardId);
