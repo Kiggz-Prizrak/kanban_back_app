@@ -142,7 +142,10 @@ async function initDatabase() {
     await sequelize.authenticate();
     console.log(`🔗 Connected to ${dbConfig.dialect.toUpperCase()} database`);
 
-    if (process.env.DROP_DATABASE_AT_LAUNCH === "1") {
+    if (
+      process.env.DROP_DATABASE_AT_LAUNCH === "1" &&
+      process.env.NODE_ENV !== "production"
+    ) {
       if (dbConfig.dialect === "mysql") {
         await sequelize.query("SET FOREIGN_KEY_CHECKS = 0;");
       }
