@@ -84,7 +84,7 @@ exports.modifyUser = async ({
   const userModifier = await userRepository.findById(id);
   if (!userModifier) throw httpError(404, "User not found");
 
-  if (userModifier.id !== auth.UserId && !auth.isAdmin) {
+  if (Number(userModifier.id) !== Number(auth.id)) {
     throw httpError(403, "Unauthorized request");
   }
 
@@ -143,8 +143,8 @@ exports.deleteUser = async ({ targetUserId, auth }) => {
     throw httpError(404, "User not found");
   }
 
-  if (user.id !== auth.UserId && !auth.isAdmin) {
-    throw httpError(401, "Unauthorized request");
+  if (Number(user.id) !== Number(auth.id)) {
+    throw httpError(403, "Unauthorized request");
   }
 
   await userRepository.deleteById(user.id);

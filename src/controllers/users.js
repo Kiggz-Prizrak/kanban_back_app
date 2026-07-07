@@ -17,7 +17,7 @@ exports.me = async (req, res) => {
     const user = await userService.getOneUser(userId);
     return res.status(200).json({ user });
   } catch (error) {
-    const status = error?.status || error?.statusCode || 500;
+    const status = error?.statusCode || error?.status || 500;
     return res
       .status(status)
       .json({ error: error?.message || "Internal server error" });
@@ -45,7 +45,7 @@ exports.signup = async (req, res) => {
     res.cookie("kanban_access_token", token, COOKIE_OPTIONS);
     return res.status(201).json({ user });
   } catch (err) {
-    const status = err.status || 500;
+    const status = err.statusCode || err.status || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
 };
@@ -61,7 +61,7 @@ exports.login = async (req, res) => {
     return res.status(200).json({ user: result.user });
   } catch (err) {
     await cleanupUploadedAvatar(req);
-    const status = err.status || 500;
+    const status = err.statusCode || err.status || 500;
     return res
       .status(status)
       .json({ message: err.message || "An error has occurred" });
@@ -83,7 +83,7 @@ exports.getOneUser = async (req, res) => {
     const user = await userService.getOneUser(req.params.id);
     return res.status(200).json(user);
   } catch (err) {
-    const status = err.status || 500;
+    const status = err.statusCode || err.status || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
 };
@@ -134,7 +134,7 @@ exports.modifyUser = async (req, res) => {
     return res.status(200).json({ message: result.message, user: result.user });
   } catch (err) {
     await cleanupUploadedAvatar(req);
-    const status = err.status || 500;
+    const status = err.statusCode || err.status || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
 };
@@ -157,7 +157,7 @@ exports.deleteUser = async (req, res) => {
 
     return res.status(200).json({ message: result.message });
   } catch (err) {
-    const status = err.status || 500;
+    const status = err.statusCode || err.status || 500;
     return res.status(status).json({ message: err.message || "Error" });
   }
 };

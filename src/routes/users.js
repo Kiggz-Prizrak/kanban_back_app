@@ -1,13 +1,14 @@
 const express = require("express");
 const auth = require("../middlewares/auth");
 const multer = require("../middlewares/multer-config");
+const { authLimiter, searchLimiter } = require("../middlewares/rateLimit");
 const usersController = require("../controllers/users");
 
 const router = express.Router();
 
 // Auth
-router.post("/signup", multer, usersController.signup);
-router.post("/login", usersController.login);
+router.post("/signup", authLimiter, multer, usersController.signup);
+router.post("/login", authLimiter, usersController.login);
 router.post("/logout", auth, usersController.logout);
 
 // Profil
@@ -21,7 +22,7 @@ router.get("/boards-member", auth, usersController.getAffiliatedBoards);
  * Recherche paginée d'utilisateurs par username ou email
  * Authentifié uniquement — utilisé pour l'invitation de membres
  */
-router.get("/search", auth, usersController.searchUsers);
+router.get("/search", auth, searchLimiter, usersController.searchUsers);
 
 // Routes individuelles
 // router.get("/", auth, usersController.getAllUsers); // désactivé volontairement — utiliser /search

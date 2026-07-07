@@ -1,4 +1,4 @@
-exports.httpError = (message, statusCode = 500) => {
+exports.httpError = (statusCode, message) => {
   const err = new Error(message);
   err.statusCode = statusCode;
   throw err;
