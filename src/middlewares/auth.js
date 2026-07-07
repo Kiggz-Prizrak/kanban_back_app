@@ -21,12 +21,15 @@ module.exports = (req, res, next) => {
 
   //  chekc JWT
   try {
-    req.auth = jwt.verify(token, process.env.JWT_SECRET);
+    req.auth = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
     return next();
   } catch (err) {
-    return res.status(401).json({
-      error: "Invalid or expired token",
-      reason: err.name, // utile en dev
-    });
+    const body = { error: "Invalid or expired token" };
+    if (process.env.NODE_ENV !== "production") {
+      body.reason = err.name;
+    }
+    return res.status(401).json(body);
   }
 };

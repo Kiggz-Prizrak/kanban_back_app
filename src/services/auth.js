@@ -12,6 +12,12 @@ const PASSWORD_RX =
 
 const { httpError } = require("../utils/httpError");
 
+// Hash bidon utilisé pour égaliser le temps de réponse quand l'email
+// n'existe pas — évite de fuiter l'existence d'un compte via bcrypt.compare
+// jamais appelé (ou via une différence de timing).
+const DUMMY_HASH =
+  "$2b$10$TrdrHm61.W1b6xIPSXAPRu19VdfNdBtOEoFo8TOwJNEjY7HivgbMG";
+
 exports.signup = async ({ body, avatarFile, protocol, host }) => {
   const { email, password, username } = body || {};
 
@@ -72,12 +78,12 @@ exports.login = async ({ email, password }) => {
   }
 
   const user = await userRepository.findByEmail(email);
-  if (!user) {
-    throw httpError(404, "no user match with this mail");
-  }
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) {
+  // Compare toujours contre un hash (réel ou bidon) pour ne pas fuiter
+  // l'existence d'un compte via le statut ou le timing de la réponse.
+  const valid = await bcrypt.compare(password, user?.password || DUMMY_HASH);
+
+  if (!user || !valid) {
     throw httpError(401, "Invalid email or password");
   }
 
@@ -86,6 +92,7 @@ exports.login = async ({ email, password }) => {
   }
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    algorithm: "HS256",
     expiresIn: process.env.JWT_EXPIRES_IN || "24h",
   });
 
